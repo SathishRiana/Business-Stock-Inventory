@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inventory Management Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body { font-family: Arial; margin: 0; padding: 0; background: #f0f0f0; }
+    nav { background: #003366; color: white; padding: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
+    nav button { background: white; color: #003366; border: none; padding: 10px; cursor: pointer; }
+    .tab-content { padding: 20px; display: none; background: white; margin: 10px; border-radius: 10px; }
+    .tab-content.active { display: block; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 10px; text-align: left; }
+    input, select { padding: 8px; margin: 5px 0; width: 100%; }
+    .btn { padding: 10px 15px; background: #003366; color: white; border: none; cursor: pointer; margin-top: 10px; }
+    .btn.export { background: green; float: right; }
+    #loginPage { display: flex; justify-content: center; align-items: center; height: 100vh; background: #003366; color: white; flex-direction: column; }
+    #loginPage input { width: 250px; margin: 10px; padding: 10px; border-radius: 5px; border: none; }
+    #loginPage button { padding: 10px 20px; background: white; color: #003366; border: none; cursor: pointer; font-weight: bold; }
+    #loginError { color: red; margin-top: 10px; }
+    #dashboard { display: none; }
+  </style>
+</head>
+<body>
+  <div id="loginPage">
+    <h2>Login to Inventory Dashboard</h2>
+    <input type="text" id="username" placeholder="Username" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="validateLogin()">Login</button>
+    <div id="loginError"></div>
+  </div>
+
+  <div id="dashboard">
+    <nav>
+      <button onclick="openTab('partMaster')">Part Code Master</button>
+      <button onclick="openTab('openingStock')">Opening Stock</button>
+      <button onclick="openTab('purchase')">Purchase</button>
+      <button onclick="openTab('sales')">Sales</button>
+      <button onclick="openTab('closingStock')">Closing Stock</button>
+      <button onclick="openTab('nextMonthOpening')">Next Month Opening</button>
+      <button onclick="openTab('monthlyReport')">Monthly Report</button>
+    </nav>
+
+    <div id="partMaster" class="tab-content active">
+      <h2>Part Code Master</h2>
+      <input type="text" id="partCode" placeholder="Part Code" />
+      <input type="text" id="partDesc" placeholder="Part Description" />
+      <button class="btn" onclick="savePartCode()">Save</button>
+      <table><thead><tr><th>Part Code</th><th>Description</th><th>Actions</th></tr></thead><tbody id="partList"></tbody></table>
+    </div>
+
+    <div id="openingStock" class="tab-content">
+      <h2>Opening Stock</h2>
+      <select id="osPartCode"></select>
+      <input type="number" id="osQty" placeholder="Quantity" />
+      <input type="date" id="osDate" />
+      <button class="btn" onclick="saveOpeningStock()">Save</button>
+      <button class="btn export" onclick="exportPDF('openingStockTable', 'Opening Stock Report')">Export PDF</button>
+      <table id="openingStockTable"><thead><tr><th>Part Code</th><th>Description</th><th>Qty</th><th>Date</th><th>Actions</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="purchase" class="tab-content">
+      <h2>Purchase</h2>
+      <select id="pPartCode"></select>
+      <input type="number" id="pQty" placeholder="Quantity" />
+      <input type="date" id="pDate" />
+      <button class="btn" onclick="savePurchase()">Save</button>
+      <button class="btn export" onclick="exportPDF('purchaseTable', 'Purchase Report')">Export PDF</button>
+      <table id="purchaseTable"><thead><tr><th>Part Code</th><th>Description</th><th>Qty</th><th>Date</th><th>Actions</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="sales" class="tab-content">
+      <h2>Sales</h2>
+      <select id="sPartCode"></select>
+      <input type="number" id="sQty" placeholder="Quantity" />
+      <input type="date" id="sDate" />
+      <button class="btn" onclick="saveSales()">Save</button>
+      <button class="btn export" onclick="exportPDF('salesTable', 'Sales Report')">Export PDF</button>
+      <table id="salesTable"><thead><tr><th>Part Code</th><th>Description</th><th>Qty</th><th>Date</th><th>Actions</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="closingStock" class="tab-content">
+      <h2>Closing Stock</h2>
+      <button class="btn export" onclick="exportPDF('closingStockTable', 'Closing Stock Report')">Export PDF</button>
+      <table id="closingStockTable"><thead><tr><th>Part Code</th><th>Description</th><th>Closing Stock</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="nextMonthOpening" class="tab-content">
+      <h2>Next Month Opening Stock</h2>
+      <button class="btn export" onclick="exportPDF('nextMonthOpeningTable', 'Next Month Opening Report')">Export PDF</button>
+      <table id="nextMonthOpeningTable"><thead><tr><th>Part Code</th><th>Description</th><th>Opening Stock</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="monthlyReport" class="tab-content">
+      <h2>Monthly Report</h2>
+      <button class="btn export" onclick="exportPDF('monthlyReportTable', 'Monthly Inventory Report')">Export PDF</button>
+      <table id="monthlyReportTable">
+        <thead>
+          <tr><th>Part Code</th><th>Description</th><th>Opening</th><th>Purchase</th><th>Sales</th><th>Closing</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function validateLogin() {
+      const user = document.getElementById('username').value;
+      const pass = document.getElementById('password').value;
+      const errorDiv = document.getElementById('loginError');
+      if (user === 'admin' && pass === 'admin') {
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+      } else {
+        errorDiv.textContent = 'Invalid username or password';
+      }
+    }
+
+    let parts = [], openingStock = [], purchase = [], sales = [];
+
+    function openTab(id) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function refreshPartSelects() {
+      const options = parts.map(p => `<option value="${p.code}">${p.code} - ${p.desc}</option>`).join("");
+      ["osPartCode", "pPartCode", "sPartCode"].forEach(id => document.getElementById(id).innerHTML = options);
+    }
+
+    function savePartCode() {
+      const code = document.getElementById('partCode').value;
+      const desc = document.getElementById('partDesc').value;
+      const index = parts.findIndex(p => p.code === code);
+      if (index >= 0) parts[index].desc = desc;
+      else parts.push({ code, desc });
+      document.getElementById('partCode').value = '';
+      document.getElementById('partDesc').value = '';
+      refreshPartSelects();
+      renderPartsTable();
+    }
+
+    function renderPartsTable() {
+      const tbody = document.getElementById('partList');
+      tbody.innerHTML = parts.map((p, i) => `
+        <tr>
+          <td>${p.code}</td>
+          <td>${p.desc}</td>
+          <td>
+            <button onclick="editPart(${i})">Edit</button>
+            <button onclick="deletePart(${i})">Delete</button>
+          </td>
+        </tr>`).join("");
+    }
+
+    function editPart(index) {
+      document.getElementById('partCode').value = parts[index].code;
+      document.getElementById('partDesc').value = parts[index].desc;
+    }
+
+    function deletePart(index) {
+      parts.splice(index, 1);
+      refreshPartSelects();
+      renderPartsTable();
+    }
+
+    function getDescription(code) {
+      const part = parts.find(p => p.code === code);
+      return part ? part.desc : '';
+    }
+
+    function saveOpeningStock() {
+      const code = document.getElementById('osPartCode').value;
+      const qty = parseInt(document.getElementById('osQty').value);
+      const date = document.getElementById('osDate').value;
+      openingStock.push({ code, qty, date });
+      renderStockTable('openingStockTable', openingStock, 'openingStock');
+    }
+
+    function savePurchase() {
+      const code = document.getElementById('pPartCode').value;
+      const qty = parseInt(document.getElementById('pQty').value);
+      const date = document.getElementById('pDate').value;
+      purchase.push({ code, qty, date });
+      renderStockTable('purchaseTable', purchase, 'purchase');
+    }
+
+    function saveSales() {
+      const code = document.getElementById('sPartCode').value;
+      const qty = parseInt(document.getElementById('sQty').value);
+      const date = document.getElementById('sDate').value;
+      sales.push({ code, qty, date });
+      renderStockTable('salesTable', sales, 'sales');
+    }
+
+    function renderStockTable(id, list, type) {
+      const tbody = document.querySelector(`#${id} tbody`);
+      tbody.innerHTML = list.map((r, i) => `
+        <tr>
+          <td>${r.code}</td>
+          <td>${getDescription(r.code)}</td>
+          <td>${r.qty}</td>
+          <td>${r.date}</td>
+          <td><button onclick="deleteRow('${type}', ${i})">Delete</button></td>
+        </tr>`).join("");
+      updateClosing();
+    }
+
+    function deleteRow(type, index) {
+      if (type === 'openingStock') openingStock.splice(index, 1);
+      if (type === 'purchase') purchase.splice(index, 1);
+      if (type === 'sales') sales.splice(index, 1);
+      renderStockTable(`${type}Table`, eval(type), type);
+    }
+
+    function updateClosing() {
+      const closing = {};
+      parts.forEach(p => {
+        const o = openingStock.filter(e => e.code === p.code).reduce((sum, e) => sum + e.qty, 0);
+        const pur = purchase.filter(e => e.code === p.code).reduce((sum, e) => sum + e.qty, 0);
+        const sal = sales.filter(e => e.code === p.code).reduce((sum, e) => sum + e.qty, 0);
+        closing[p.code] = o + pur - sal;
+      });
+      renderSummaryTable('closingStockTable', closing);
+      renderSummaryTable('nextMonthOpeningTable', closing);
+      updateMonthlyReport();
+    }
+
+    function renderSummaryTable(id, data) {
+      const tbody = document.querySelector(`#${id} tbody`);
+      tbody.innerHTML = '';
+      for (const code in data) {
+        const desc = getDescription(code);
+        tbody.innerHTML += `<tr><td>${code}</td><td>${desc}</td><td>${data[code]}</td></tr>`;
+      }
+    }
+
+    function updateMonthlyReport() {
+      const tbody = document.querySelector('#monthlyReportTable tbody');
+      tbody.innerHTML = '';
+      parts.forEach(p => {
+        const opening = openingStock.filter(e => e.code === p.code).reduce((sum, e) => sum + e.qty, 0);
+        const purchaseQty = purchase.filter(e => e.code === p.code).reduce((sum, e) => sum + e.qty, 0);
+        const salesQty = sales.filter(e => e.code === p.code).reduce((sum, e) => sum + e.qty, 0);
+        const closing = opening + purchaseQty - salesQty;
+        tbody.innerHTML += `<tr><td>${p.code}</td><td>${p.desc}</td><td>${opening}</td><td>${purchaseQty}</td><td>${salesQty}</td><td>${closing}</td></tr>`;
+      });
+    }
+
+    function exportPDF(tableId, title = 'Exported Report') {
+      const doc = new jspdf.jsPDF('landscape', 'pt', 'a4');
+      doc.setFontSize(18);
+      doc.setTextColor('#003366');
+      doc.text(title, 40, 40);
+      doc.setFontSize(10);
+      const date = new Date().toLocaleString();
+      doc.setTextColor('#666666');
+      doc.text(`Generated on: ${date}`, 40, 60);
+      const table = document.getElementById(tableId);
+      const headers = [...table.querySelectorAll('thead tr th')].map(th => th.innerText);
+      const rows = [...table.querySelectorAll('tbody tr')].map(tr => [...tr.querySelectorAll('td')].map(td => td.innerText));
+      doc.autoTable({
+        startY: 80,
+        head: [headers],
+        body: rows,
+        styles: {
+          fontSize: 10,
+          halign: 'left',
+          valign: 'middle',
+          cellPadding: 6,
+        },
+        headStyles: {
+          fillColor: [0, 51, 102],
+          textColor: 255,
+          fontStyle: 'bold',
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        margin: { top: 80, left: 40, right: 40 },
+        theme: 'striped',
+      });
+      doc.save(`${title.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
+    }
+  </script>
+</body>
+</html>
